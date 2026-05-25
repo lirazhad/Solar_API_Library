@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SafeAreaView, ScrollView, Alert, View } from 'react-native';
 import { globalStyles } from './src/styles/globalStyles';
 import Header from './src/components/Header';
 import AddressSearch from './src/components/AddressSearch';
@@ -9,8 +9,14 @@ import SolarData from './src/components/SolarData';
 import { getLatLongFromAddress, getDataLayers, findClosestBuildingInsights } from './src/services/SolarApiService';
 import { loadAndProcessGeoTIFF } from './src/utils/GeoTIFFProcessor';
 import { layerTypes, apiKey } from './src/constants/palettes';
+import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+
+SplashScreen.preventAutoHideAsync();
 
 const App = () => {
+  const [appIsReady, setAppIsReady] = useState(false);
   const [region, setRegion] = useState({
     latitude: 32.7720012,
     longitude: -117.0726966,
@@ -26,6 +32,27 @@ const App = () => {
   const [selectedMonth, setSelectedMonth] = useState(6); // July
   const [selectedHour, setSelectedHour] = useState(12); // 12 PM
   const [displayOverlay, setDisplayOverlay] = useState(true);
+
+  useEffect(() => {
+    async function prepare() {
+      try {
+        await Font.loadAsync({
+          'Kameron': { uri: 'https://fonts.gstatic.com/s/kameron/v25/0yb9GD49J1zRVo694_0.ttf' },
+        });
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setAppIsReady(true);
+      }
+    }
+    prepare();
+  }, []);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (appIsReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
 
   const handleSearch = async (address) => {
     try {
@@ -44,7 +71,6 @@ const App = () => {
       const layers = await getDataLayers(location.lat, location.lng);
       setDataLayers(layers);
 
-      // Load mask
       if (layers.maskUrl) {
           const maskResult = await loadAndProcessGeoTIFF(layers.maskUrl + `&key=${apiKey}`, true);
           setMaskRasters(maskResult.rasters);
@@ -91,8 +117,13 @@ const App = () => {
     updateOverlay();
   }, [dataLayers, selectedLayer, selectedMonth, selectedHour, displayOverlay, maskRasters]);
 
+  if (!appIsReady) {
+    return null;
+  }
+
   return (
-    <SafeAreaView style={globalStyles.container}>
+    <SafeAreaView style={globalStyles.container} onLayout={onLayoutRootView}>
+      <StatusBar style="auto" />
       <Header />
       <ScrollView>
         <AddressSearch onSearch={handleSearch} />

@@ -121,11 +121,14 @@ export const loadAndProcessGeoTIFF = async (
     if (layerId === "hourlyShade" && bandData[0] === 0 && bandData[bandData.length - 1] === 0) {
         // Return a fully transparent image
         const transparentRgba = new Uint8Array(width * height * 4).fill(0);
-        const sw = proj4(utmZone11N, "EPSG:4326", [bbox[0], bbox[1]]);
-        const ne = proj4(utmZone11N, "EPSG:4326", [bbox[2], bbox[3]]);
+        const sw = proj4(DEFAULT_UTM_PROJ, "EPSG:4326", [bbox[0], bbox[1]]);
+        const ne = proj4(DEFAULT_UTM_PROJ, "EPSG:4326", [bbox[2], bbox[3]]);
         return {
           image: createBmpBase64(width, height, transparentRgba),
-          bounds: [[sw[1], sw[0]], [ne[1], ne[0]]],
+          bounds: [
+            { latitude: sw[1], longitude: sw[0] },
+            { latitude: ne[1], longitude: ne[0] }
+          ],
           rasters: null
         };
     }
@@ -159,8 +162,8 @@ export const loadAndProcessGeoTIFF = async (
     const ne = proj4(DEFAULT_UTM_PROJ, "EPSG:4326", [bbox[2], bbox[3]]);
 
     const bounds = [
-      [sw[1], sw[0]], // South West [lat, lng]
-      [ne[1], ne[0]], // North East [lat, lng]
+      { latitude: sw[1], longitude: sw[0] },
+      { latitude: ne[1], longitude: ne[0] }
     ];
 
     const base64Image = createBmpBase64(width, height, rgbaData);
